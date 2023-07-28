@@ -10,6 +10,8 @@ import org.h2.test.TestBase;
 import org.h2.util.JdbcUtils;
 import org.h2.util.StringUtils;
 
+import java.util.function.Consumer;
+
 /**
  * Tests the ability to deserialize objects that are not part of the system
  * class-loading scope.
@@ -43,7 +45,7 @@ public class TestObjectDeserialization extends TestBase {
 
     private void testThreadContextClassLoader() {
         usesThreadContextClassLoader = false;
-        Thread.currentThread().setContextClassLoader(new TestClassLoader());
+        Thread.currentThread().setContextClassLoader(new TestClassLoader(CLAZZ, (b)-> usesThreadContextClassLoader=b));
         assertThrows(ErrorCode.DESERIALIZATION_FAILED_1,
                 () -> JdbcUtils.deserialize(StringUtils.convertHexToBytes(OBJECT), null));
         assertTrue(usesThreadContextClassLoader);
@@ -52,17 +54,22 @@ public class TestObjectDeserialization extends TestBase {
     /**
      * A special class loader.
      */
-    private class TestClassLoader extends ClassLoader {
+    private static class TestClassLoader extends ClassLoader {
 
-        public TestClassLoader() {
+        private final Consumer<Boolean> classProcessing;
+        private final String clazz;
+
+        public TestClassLoader(String clazz, Consumer<Boolean> classProcessing) {
             super();
+            this.clazz = clazz;
+            this.classProcessing = classProcessing;
         }
 
         @Override
         protected synchronized Class<?> loadClass(String name, boolean resolve)
                 throws ClassNotFoundException {
-            if (name.equals(CLAZZ)) {
-                usesThreadContextClassLoader = true;
+            if (name.equals(clazz)) {
+                classProcessing.accept(true);
             }
             return super.loadClass(name, resolve);
         }

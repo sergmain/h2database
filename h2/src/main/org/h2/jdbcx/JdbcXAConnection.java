@@ -100,7 +100,7 @@ public final class JdbcXAConnection extends TraceObject implements XAConnection,
         }
         // this will ensure the rollback command is cached
         physicalConn.rollback();
-        handleConn = new PooledJdbcConnection(physicalConn);
+        handleConn = new PooledJdbcConnection(physicalConn, this::closedHandle);
         return handleConn;
     }
 
@@ -438,12 +438,14 @@ public final class JdbcXAConnection extends TraceObject implements XAConnection,
     /**
      * A pooled connection.
      */
-    final class PooledJdbcConnection extends JdbcConnection {
+    private static final class PooledJdbcConnection extends JdbcConnection {
 
         private boolean isClosed;
+        public Runnable closedHandleFunc;
 
-        public PooledJdbcConnection(JdbcConnection conn) {
+        public PooledJdbcConnection(JdbcConnection conn, Runnable closedHandleFunc) {
             super(conn);
+            this.closedHandleFunc = closedHandleFunc;
         }
 
         @Override
@@ -455,7 +457,7 @@ public final class JdbcXAConnection extends TraceObject implements XAConnection,
                 } catch (SQLException e) {
                     // ignore
                 }
-                closedHandle();
+                closedHandleFunc.run();
                 isClosed = true;
             }
         }
