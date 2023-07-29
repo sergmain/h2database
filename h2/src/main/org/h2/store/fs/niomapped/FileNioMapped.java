@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs.niomapped;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -116,13 +118,30 @@ class FileNioMapped extends FileBaseDefault {
         return "nioMapped:" + name;
     }
 
-    @Override
-    public synchronized long size() throws IOException {
-        return fileLength;
-    }
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
 
     @Override
-    public synchronized int read(ByteBuffer dst, long pos) throws IOException {
+    public long size() throws IOException {
+        writeLock0.lock();
+        try {
+        return fileLength;
+        } finally {
+            writeLock0.unlock();
+        }
+    }
+
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+    @Override
+    public int read(ByteBuffer dst, long pos) throws IOException {
+        writeLock1.lock();
+        try {
         checkFileSizeLimit(pos);
         try {
             int len = dst.remaining();
@@ -143,6 +162,9 @@ class FileNioMapped extends FileBaseDefault {
             e2.initCause(e);
             throw e2;
         }
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
     @Override
@@ -156,7 +178,14 @@ class FileNioMapped extends FileBaseDefault {
         }
     }
 
-    public synchronized void setFileLength(long newLength) throws IOException {
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
+
+    public void setFileLength(long newLength) throws IOException {
+        writeLock2.lock();
+        try {
         if (mode == MapMode.READ_ONLY) {
             throw new NonWritableChannelException();
         }
@@ -179,6 +208,9 @@ class FileNioMapped extends FileBaseDefault {
             System.gc();
         }
         reMap();
+        } finally {
+            writeLock2.unlock();
+        }
     }
 
     @Override
@@ -187,8 +219,15 @@ class FileNioMapped extends FileBaseDefault {
         channel.force(metaData);
     }
 
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
     @Override
-    public synchronized int write(ByteBuffer src, long position) throws IOException {
+    public int write(ByteBuffer src, long position) throws IOException {
+        writeLock3.lock();
+        try {
         checkFileSizeLimit(position);
         int len = src.remaining();
         // check if need to expand file
@@ -198,12 +237,25 @@ class FileNioMapped extends FileBaseDefault {
         mapped.position((int)position);
         mapped.put(src);
         return len;
+        } finally {
+            writeLock3.unlock();
+        }
     }
 
+
+    private static final ReentrantReadWriteLock lock4 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock4 = lock4.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock4 = lock4.writeLock();
+
     @Override
-    public synchronized FileLock tryLock(long position, long size,
+    public FileLock tryLock(long position, long size,
             boolean shared) throws IOException {
+        writeLock4.lock();
+        try {
         return channel.tryLock(position, size, shared);
+        } finally {
+            writeLock4.unlock();
+        }
     }
 
 }

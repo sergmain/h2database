@@ -5,6 +5,8 @@
  */
 package org.h2.value;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -158,19 +160,32 @@ public final class Transfer {
         this.socket = s;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Initialize the transfer object. This method will try to open an input and
      * output stream.
      * @throws IOException on failure
      */
-    public synchronized void init() throws IOException {
+    public void init() throws IOException {
         if (socket != null) {
-            in = new DataInputStream(
-                    new BufferedInputStream(
-                            socket.getInputStream(), Transfer.BUFFER_SIZE));
-            out = new DataOutputStream(
-                    new BufferedOutputStream(
-                            socket.getOutputStream(), Transfer.BUFFER_SIZE));
+            writeLock0.lock();
+            try {
+                if (socket!=null) {
+                    in = new DataInputStream(
+                            new BufferedInputStream(
+                                    socket.getInputStream(), Transfer.BUFFER_SIZE));
+                    out = new DataOutputStream(
+                            new BufferedOutputStream(
+                                    socket.getOutputStream(), Transfer.BUFFER_SIZE));
+                }
+            }
+            finally {
+                writeLock0.unlock();
+            }
         }
     }
 
@@ -431,20 +446,33 @@ public final class Transfer {
         in.readFully(buff, off, len);
     }
 
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
     /**
      * Close the transfer object and the socket.
      */
-    public synchronized void close() {
+    public void close() {
         if (socket != null) {
+            writeLock1.lock();
             try {
-                if (out != null) {
-                    out.flush();
+                if (socket==null) {
+                    return;
                 }
-                socket.close();
-            } catch (IOException e) {
-                DbException.traceThrowable(e);
+                try {
+                    if (out != null) {
+                        out.flush();
+                    }
+                    socket.close();
+                } catch (IOException e) {
+                    DbException.traceThrowable(e);
+                } finally {
+                    socket = null;
+                }
             } finally {
-                socket = null;
+                writeLock1.unlock();
             }
         }
     }
@@ -1285,8 +1313,22 @@ public final class Transfer {
         return version;
     }
 
-    public synchronized boolean isClosed() {
-        return socket == null || socket.isClosed();
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
+
+    public boolean isClosed() {
+        if (socket!=null) {
+            writeLock2.lock();
+            try {
+                return socket==null || socket.isClosed();
+            }
+            finally {
+                writeLock2.unlock();
+            }
+        }
+        return true;
     }
 
     /**

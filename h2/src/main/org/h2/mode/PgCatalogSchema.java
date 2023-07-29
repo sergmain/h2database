@@ -5,6 +5,8 @@
  */
 package org.h2.mode;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,7 +45,14 @@ public final class PgCatalogSchema extends MetaSchema {
         return map;
     }
 
-    private synchronized HashMap<String, Table> fillMap() {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private HashMap<String, Table> fillMap() {
+        writeLock0.lock();
+        try {
         HashMap<String, Table> map = tables;
         if (map == null) {
             map = database.newStringMap();
@@ -54,6 +63,9 @@ public final class PgCatalogSchema extends MetaSchema {
             tables = map;
         }
         return map;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
 }

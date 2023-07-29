@@ -5,6 +5,8 @@
  */
 package org.h2.schema;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -73,7 +75,14 @@ public final class TriggerObject extends SchemaObject {
         this.insteadOf = insteadOf;
     }
 
-    private synchronized void load() {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private void load() {
+        writeLock0.lock();
+        try {
         if (triggerCallback != null) {
             return;
         }
@@ -94,6 +103,9 @@ public final class TriggerObject extends SchemaObject {
             triggerCallback = null;
             throw DbException.get(ErrorCode.ERROR_CREATING_TRIGGER_OBJECT_3, e, getName(),
                 triggerClassName != null ? triggerClassName : "..source..", e.toString());
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 

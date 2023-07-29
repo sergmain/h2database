@@ -5,6 +5,8 @@
  */
 package org.h2.dev.ftp.server;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -87,12 +89,18 @@ public class FtpData extends Thread {
         socket = null;
     }
 
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
     /**
      * Read a file from a client.
      *
      * @param fileName the target file name
-     */
-    synchronized void receive(String fileName) throws IOException {
+     */ void receive(String fileName) throws IOException {
+        writeLock1.lock();
+        try {
         connect();
         try {
             InputStream in = socket.getInputStream();
@@ -103,7 +111,15 @@ public class FtpData extends Thread {
             socket.close();
         }
         server.trace("closed");
+        } finally {
+            writeLock1.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
 
     /**
      * Send a file to the client. This method waits until the client has
@@ -111,8 +127,9 @@ public class FtpData extends Thread {
      *
      * @param fileName the source file name
      * @param skip the number of bytes to skip
-     */
-    synchronized void send(String fileName, long skip) throws IOException {
+     */ void send(String fileName, long skip) throws IOException {
+        writeLock2.lock();
+        try {
         connect();
         try {
             OutputStream out = socket.getOutputStream();
@@ -124,14 +141,23 @@ public class FtpData extends Thread {
             socket.close();
         }
         server.trace("closed");
+        } finally {
+            writeLock2.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
 
     /**
      * Wait until the client has connected, and then send the data to him.
      *
      * @param data the data to send
-     */
-    synchronized void send(byte[] data) throws IOException {
+     */ void send(byte[] data) throws IOException {
+        writeLock3.lock();
+        try {
         connect();
         try {
             OutputStream out = socket.getOutputStream();
@@ -140,6 +166,9 @@ public class FtpData extends Thread {
             socket.close();
         }
         server.trace("closed");
+        } finally {
+            writeLock3.unlock();
+        }
     }
 
 }

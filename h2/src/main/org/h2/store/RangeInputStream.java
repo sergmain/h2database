@@ -5,6 +5,8 @@
  */
 package org.h2.store;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -90,9 +92,19 @@ public final class RangeInputStream extends FilterInputStream {
     public void mark(int readlimit) {
     }
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized void reset() throws IOException {
+    public void reset() throws IOException {
+        writeLock0.lock();
+        try {
         throw new IOException("mark/reset not supported");
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     @Override

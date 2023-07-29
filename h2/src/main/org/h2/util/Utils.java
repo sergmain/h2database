@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -283,15 +285,25 @@ public class Utils {
         return (totalGCCount + (poolCount >> 1)) / poolCount;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Run Java memory garbage collection.
      */
-    public static synchronized void collectGarbage() {
+    public static void collectGarbage() {
+        writeLock0.lock();
+        try {
         Runtime runtime = Runtime.getRuntime();
         long garbageCollectionCount = getGarbageCollectionCount();
         while (garbageCollectionCount == getGarbageCollectionCount()) {
             runtime.gc();
             Thread.yield();
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 

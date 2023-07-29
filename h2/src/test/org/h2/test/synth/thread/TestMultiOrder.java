@@ -5,6 +5,8 @@
  */
 package org.h2.test.synth.thread;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -109,16 +111,46 @@ public class TestMultiOrder extends TestMultiThread {
         return buff.toString();
     }
 
-    private static synchronized int getNextCustomerId() {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private static int getNextCustomerId() {
+        writeLock0.lock();
+        try {
         return customerCount++;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
-    private static synchronized int increaseOrders() {
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
+    private static int increaseOrders() {
+        writeLock1.lock();
+        try {
         return orderCount++;
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
-    private static synchronized int increaseOrderLines(int count) {
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
+
+    private static int increaseOrderLines(int count) {
+        writeLock2.lock();
+        try {
         return orderLineCount += count;
+        } finally {
+            writeLock2.unlock();
+        }
     }
 
     private static int getCustomerCount() {

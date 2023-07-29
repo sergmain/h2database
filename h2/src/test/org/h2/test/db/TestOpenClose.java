@@ -5,6 +5,8 @@
  */
 package org.h2.test.db;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -214,8 +216,16 @@ public class TestOpenClose extends TestDb {
         conn.close();
     }
 
-    synchronized int getNextId() {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+ int getNextId() {
+        writeLock0.lock();
+        try {
         return nextId++;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     private void test1_1() throws IOException {

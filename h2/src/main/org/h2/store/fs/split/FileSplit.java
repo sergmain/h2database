@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs.split;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -34,10 +36,20 @@ class FileSplit extends FileBaseDefault {
         this.maxLength = maxLength;
     }
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized void implCloseChannel() throws IOException {
+    public void implCloseChannel() throws IOException {
+        writeLock0.lock();
+        try {
         for (FileChannel c : list) {
             c.close();
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 
@@ -46,9 +58,16 @@ class FileSplit extends FileBaseDefault {
         return length;
     }
 
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
     @Override
-    public synchronized int read(ByteBuffer dst, long position)
+    public int read(ByteBuffer dst, long position)
             throws IOException {
+        writeLock1.lock();
+        try {
         int len = dst.remaining();
         if (len == 0) {
             return 0;
@@ -61,6 +80,9 @@ class FileSplit extends FileBaseDefault {
         len = (int) Math.min(len, maxLength - offset);
         FileChannel channel = getFileChannel(position);
         return channel.read(dst, offset);
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
     private FileChannel getFileChannel(long position) throws IOException {
@@ -104,15 +126,32 @@ class FileSplit extends FileBaseDefault {
         this.length = newLength;
     }
 
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
     @Override
-    public synchronized void force(boolean metaData) throws IOException {
+    public void force(boolean metaData) throws IOException {
+        writeLock2.lock();
+        try {
         for (FileChannel c : list) {
             c.force(metaData);
         }
+        } finally {
+            writeLock2.unlock();
+        }
     }
 
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
     @Override
-    public synchronized int write(ByteBuffer src, long position) throws IOException {
+    public int write(ByteBuffer src, long position) throws IOException {
+        writeLock3.lock();
+        try {
         if (position >= length && position > maxLength) {
             // may need to extend and create files
             long oldFilePointer = position;
@@ -140,12 +179,25 @@ class FileSplit extends FileBaseDefault {
         }
         length = Math.max(length, position + l);
         return l;
+        } finally {
+            writeLock3.unlock();
+        }
     }
 
+
+    private static final ReentrantReadWriteLock lock4 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock4 = lock4.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock4 = lock4.writeLock();
+
     @Override
-    public synchronized FileLock tryLock(long position, long size,
+    public FileLock tryLock(long position, long size,
             boolean shared) throws IOException {
+        writeLock4.lock();
+        try {
         return list[0].tryLock(position, size, shared);
+        } finally {
+            writeLock4.unlock();
+        }
     }
 
     @Override

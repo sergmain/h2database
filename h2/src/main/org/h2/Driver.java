@@ -5,6 +5,8 @@
  */
 package org.h2;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
@@ -29,6 +31,10 @@ import org.h2.message.DbException;
  * </pre>
  */
 public class Driver implements java.sql.Driver, JdbcDriverBackwardsCompat {
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
 
     private static final Driver INSTANCE = new Driver();
     private static final String DEFAULT_URL = "jdbc:default:connection";
@@ -139,11 +145,14 @@ public class Driver implements java.sql.Driver, JdbcDriverBackwardsCompat {
         return null;
     }
 
+
     /**
      * INTERNAL
      * @return instance of the driver registered with the DriverManager
      */
-    public static synchronized Driver load() {
+    public static Driver load() {
+        writeLock0.lock();
+        try {
         try {
             if (!registered) {
                 registered = true;
@@ -153,12 +162,22 @@ public class Driver implements java.sql.Driver, JdbcDriverBackwardsCompat {
             DbException.traceThrowable(e);
         }
         return INSTANCE;
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * INTERNAL
      */
-    public static synchronized void unload() {
+    public static void unload() {
+        writeLock1.lock();
+        try {
         try {
             if (registered) {
                 registered = false;
@@ -166,6 +185,9 @@ public class Driver implements java.sql.Driver, JdbcDriverBackwardsCompat {
             }
         } catch (SQLException e) {
             DbException.traceThrowable(e);
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 

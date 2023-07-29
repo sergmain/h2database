@@ -5,6 +5,8 @@
  */
 package org.h2.bnf.context;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -134,6 +136,11 @@ public class DbContents {
         this.mayHaveStandardViews = mayHaveStandardViews;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Read the contents of this database from the database meta data.
      *
@@ -141,8 +148,10 @@ public class DbContents {
      * @param conn the connection
      * @throws SQLException on failure
      */
-    public synchronized void readContents(String url, Connection conn)
+    public void readContents(String url, Connection conn)
             throws SQLException {
+        writeLock0.lock();
+        try {
         isH2 = url.startsWith("jdbc:h2:");
         isDB2 = url.startsWith("jdbc:db2:");
         isSQLite = url.startsWith("jdbc:sqlite:");
@@ -200,6 +209,9 @@ public class DbContents {
                     defaultSchema = schema;
                 }
             }
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 

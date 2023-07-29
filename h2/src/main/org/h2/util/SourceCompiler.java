@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -396,7 +398,14 @@ public class SourceCompiler {
         }.execute();
     }
 
-    private static synchronized void javacSun(Path javaFile) {
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
+    private static void javacSun(Path javaFile) {
+        writeLock1.lock();
+        try {
         PrintStream old = System.err;
         ByteArrayOutputStream buff = new ByteArrayOutputStream();
         try {
@@ -419,6 +428,9 @@ public class SourceCompiler {
             throw DbException.convert(e);
         } finally {
             System.setErr(old);
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 

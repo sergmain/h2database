@@ -5,6 +5,8 @@
  */
 package org.h2.message;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -220,11 +222,21 @@ public class TraceSystem implements TraceWriter {
         return levelFile;
     }
 
-    private synchronized String format(String module, String s) {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private String format(String module, String s) {
+        writeLock0.lock();
+        try {
         if (dateFormat == null) {
             dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss ");
         }
         return dateFormat.format(System.currentTimeMillis()) + module + ": " + s;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     @Override
@@ -249,7 +261,14 @@ public class TraceSystem implements TraceWriter {
         }
     }
 
-    private synchronized void writeFile(String s, Throwable t) {
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
+    private void writeFile(String s, Throwable t) {
+        writeLock1.lock();
+        try {
         try {
             checkSize = (checkSize + 1) % CHECK_SIZE_EACH_WRITES;
             if (checkSize == 0) {
@@ -283,6 +302,9 @@ public class TraceSystem implements TraceWriter {
             }
         } catch (Exception e) {
             logWritingError(e);
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 
@@ -319,7 +341,14 @@ public class TraceSystem implements TraceWriter {
         return true;
     }
 
-    private synchronized void closeWriter() {
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
+
+    private void closeWriter() {
+        writeLock2.lock();
+        try {
         if (printWriter != null) {
             printWriter.flush();
             printWriter.close();
@@ -332,6 +361,9 @@ public class TraceSystem implements TraceWriter {
                 // ignore
             }
             fileWriter = null;
+        }
+        } finally {
+            writeLock2.unlock();
         }
     }
 

@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs.retry;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedByInterruptException;
@@ -188,15 +190,25 @@ class FileRetryOnInterrupt extends FileBase {
         }
     }
 
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
     @Override
-    public synchronized FileLock tryLock(long position, long size,
+    public FileLock tryLock(long position, long size,
             boolean shared) throws IOException {
+        writeLock1.lock();
+        try {
         FileLock l = channel.tryLock(position, size, shared);
         if (l == null) {
             return null;
         }
         lock = new FileLockRetry(l, this);
         return lock;
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
     /**

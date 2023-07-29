@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs.niomem;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.nio.ByteBuffer;
 import java.nio.channels.NonWritableChannelException;
 import java.util.LinkedHashMap;
@@ -70,40 +72,67 @@ class FileNioMemData {
         lastModified = System.currentTimeMillis();
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Lock the file in exclusive mode if possible.
      *
      * @return if locking was successful
-     */
-    synchronized boolean lockExclusive() {
+     */ boolean lockExclusive() {
+        writeLock0.lock();
+        try {
         if (sharedLockCount > 0 || isLockedExclusive) {
             return false;
         }
         isLockedExclusive = true;
         return true;
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * Lock the file in shared mode if possible.
      *
      * @return if locking was successful
-     */
-    synchronized boolean lockShared() {
+     */ boolean lockShared() {
+        writeLock1.lock();
+        try {
         if (isLockedExclusive) {
             return false;
         }
         sharedLockCount++;
         return true;
+        } finally {
+            writeLock1.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
 
     /**
      * Unlock the file.
-     */
-    synchronized void unlock() {
+     */ void unlock() {
+        writeLock2.lock();
+        try {
         if (isLockedExclusive) {
             isLockedExclusive = false;
         } else {
             sharedLockCount = Math.max(0, sharedLockCount - 1);
+        }
+        } finally {
+            writeLock2.unlock();
         }
     }
 
@@ -120,10 +149,20 @@ class FileNioMemData {
             this.size = size;
         }
 
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
         @Override
-        public synchronized V put(K key, V value) {
+        public V put(K key, V value) {
+        writeLock3.lock();
+        try {
             return super.put(key, value);
+            } finally {
+            writeLock3.unlock();
         }
+    }
 
         @Override
         protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {

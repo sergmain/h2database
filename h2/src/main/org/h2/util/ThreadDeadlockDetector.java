@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -47,12 +49,22 @@ public class ThreadDeadlockDetector {
         }, 10, 10_000);
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Initialize the detector.
      */
-    public static synchronized void init() {
+    public static void init() {
+        writeLock0.lock();
+        try {
         if (detector == null) {
             detector = new ThreadDeadlockDetector();
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 

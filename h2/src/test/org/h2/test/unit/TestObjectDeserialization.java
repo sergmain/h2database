@@ -5,6 +5,8 @@
  */
 package org.h2.test.unit;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.h2.api.ErrorCode;
 import org.h2.test.TestBase;
 import org.h2.util.JdbcUtils;
@@ -65,14 +67,24 @@ public class TestObjectDeserialization extends TestBase {
             this.classProcessing = classProcessing;
         }
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
         @Override
-        protected synchronized Class<?> loadClass(String name, boolean resolve)
+        protected Class<?> loadClass(String name, boolean resolve)
                 throws ClassNotFoundException {
+        writeLock0.lock();
+        try {
             if (name.equals(clazz)) {
                 classProcessing.accept(true);
             }
             return super.loadClass(name, resolve);
+            } finally {
+            writeLock0.unlock();
         }
+    }
 
     }
 

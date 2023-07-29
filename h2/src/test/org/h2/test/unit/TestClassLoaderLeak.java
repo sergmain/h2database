@@ -5,6 +5,8 @@
  */
 package org.h2.test.unit;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
@@ -104,9 +106,16 @@ public class TestClassLoaderLeak extends TestBase {
         }
 
         // allows delegation of H2 to the AppClassLoader
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
         @Override
-        public synchronized Class<?> loadClass(String name, boolean resolve)
+        public Class<?> loadClass(String name, boolean resolve)
                 throws ClassNotFoundException {
+        writeLock0.lock();
+        try {
             if (!name.contains(CLASS_NAME) && !name.startsWith("org.h2.")) {
                 return super.loadClass(name, resolve);
             }
@@ -122,7 +131,10 @@ public class TestClassLoaderLeak extends TestBase {
                 }
             }
             return c;
+            } finally {
+            writeLock0.unlock();
         }
+    }
     }
 
 }

@@ -5,6 +5,8 @@
  */
 package org.h2.schema;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.h2.api.ErrorCode;
 import org.h2.command.ddl.SequenceOptions;
 import org.h2.engine.DbObject;
@@ -135,6 +137,11 @@ public final class Sequence extends SchemaObject {
         this.belongsToTable = belongsToTable;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Allows the base value, start value, min value, max value, increment and
      * cache size to be updated atomically, including atomic validation. Useful
@@ -156,8 +163,10 @@ public final class Sequence extends SchemaObject {
      * @param cacheSize
      *            the new cache size ({@code null} if no change)
      */
-    public synchronized void modify(Long baseValue, Long startValue, Long minValue, Long maxValue, Long increment,
+    public void modify(Long baseValue, Long startValue, Long minValue, Long maxValue, Long increment,
             Cycle cycle, Long cacheSize) {
+        writeLock0.lock();
+        try {
         long baseValueAsLong = baseValue != null ? baseValue : this.baseValue;
         long startValueAsLong = startValue != null ? startValue : this.startValue;
         long minValueAsLong = minValue != null ? minValue : this.minValue;
@@ -189,6 +198,9 @@ public final class Sequence extends SchemaObject {
         this.increment = incrementAsLong;
         this.cacheSize = cacheSizeAsLong;
         this.cycle = cycle;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     /**
@@ -365,14 +377,24 @@ public final class Sequence extends SchemaObject {
         return builder.toString();
     }
 
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
+
     /**
      * Append the options part of the SQL statement to create the sequence.
      *
      * @param builder the builder
      * @return the builder
      */
-    public synchronized StringBuilder getSequenceOptionsSQL(StringBuilder builder) {
+    public StringBuilder getSequenceOptionsSQL(StringBuilder builder) {
+        writeLock2.lock();
+        try {
         return getSequenceOptionsSQL(builder, baseValue);
+        } finally {
+            writeLock2.unlock();
+        }
     }
 
     private StringBuilder getSequenceOptionsSQL(StringBuilder builder, long value) {
@@ -559,13 +581,33 @@ public final class Sequence extends SchemaObject {
         invalidate();
     }
 
-    public synchronized long getBaseValue() {
+    private static final ReentrantReadWriteLock lock6 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock6 = lock6.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock6 = lock6.writeLock();
+
+
+    public long getBaseValue() {
+        writeLock6.lock();
+        try {
         // Use synchronized because baseValue is not volatile
         return baseValue;
+        } finally {
+            writeLock6.unlock();
+        }
     }
 
-    public synchronized long getCurrentValue() {
+    private static final ReentrantReadWriteLock lock7 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock7 = lock7.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock7 = lock7.writeLock();
+
+
+    public long getCurrentValue() {
+        writeLock7.lock();
+        try {
         return baseValue - increment;
+        } finally {
+            writeLock7.unlock();
+        }
     }
 
     public void setBelongsToTable(boolean b) {

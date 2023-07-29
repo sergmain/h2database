@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -294,18 +296,28 @@ public abstract class FilePath {
         }
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Get the next temporary file name part (the part in the middle).
      *
      * @param newRandom if the random part of the filename should change
      * @return the file name part
      */
-    private static synchronized String getNextTempFileNamePart(
+    private static String getNextTempFileNamePart(
             boolean newRandom) {
+        writeLock0.lock();
+        try {
         if (newRandom || tempRandom == null) {
             tempRandom = MathUtils.randomInt(Integer.MAX_VALUE) + ".";
         }
         return tempRandom + tempSequence++;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     /**

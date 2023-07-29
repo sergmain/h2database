@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -61,7 +63,14 @@ public class MathUtils {
         return (x + blockSizePowerOf2 - 1) & -blockSizePowerOf2;
     }
 
-    private static synchronized SecureRandom getSecureRandom() {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private static SecureRandom getSecureRandom() {
+        writeLock0.lock();
+        try {
         if (secureRandom != null) {
             return secureRandom;
         }
@@ -120,6 +129,9 @@ public class MathUtils {
             secureRandom = new SecureRandom();
         }
         return secureRandom;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     /**

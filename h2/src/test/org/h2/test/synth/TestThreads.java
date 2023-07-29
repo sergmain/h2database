@@ -5,6 +5,8 @@
  */
 package org.h2.test.synth;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -115,8 +117,18 @@ public class TestThreads extends TestDb implements Runnable {
         return maxId;
     }
 
-    private synchronized int incrementMaxId() {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private int incrementMaxId() {
+        writeLock0.lock();
+        try {
         return maxId++;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     private String getRandomTable() {

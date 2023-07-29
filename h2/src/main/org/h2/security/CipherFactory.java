@@ -5,6 +5,8 @@
  */
 package org.h2.security;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -185,6 +187,11 @@ public class CipherFactory {
         return list;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Attempts to weaken the security properties to allow anonymous TLS.
      * New JREs would not choose an anonymous cipher suite in a TLS handshake
@@ -200,7 +207,9 @@ public class CipherFactory {
      * Later changes to this property will not have any effect on server socket
      * behavior.
      */
-    public static synchronized void removeAnonFromLegacyAlgorithms() {
+    public static void removeAnonFromLegacyAlgorithms() {
+        writeLock0.lock();
+        try {
         String legacyOriginal = getLegacyAlgorithmsSilently();
         if (legacyOriginal == null) {
             return;
@@ -209,7 +218,15 @@ public class CipherFactory {
         if (!legacyOriginal.equals(legacyNew)) {
             setLegacyAlgorithmsSilently(legacyNew);
         }
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * Attempts to resets the security property to the default value.
@@ -220,8 +237,13 @@ public class CipherFactory {
      * socket behavior.
      * @see #removeAnonFromLegacyAlgorithms()
      */
-    public static synchronized void resetDefaultLegacyAlgorithms() {
+    public static void resetDefaultLegacyAlgorithms() {
+        writeLock1.lock();
+        try {
         setLegacyAlgorithmsSilently(DEFAULT_LEGACY_ALGORITHMS);
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
     /**

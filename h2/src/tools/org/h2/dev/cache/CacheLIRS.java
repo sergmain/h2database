@@ -5,6 +5,8 @@
  */
 package org.h2.dev.cache;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -655,13 +657,20 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
             return value;
         }
 
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
+
         /**
          * Access an item, moving the entry to the top of the stack or front of
          * the queue if found.
          *
          * @param key the key
          */
-        private synchronized void access(Object key, int hash) {
+        private void access(Object key, int hash) {
+        writeLock2.lock();
+        try {
             Entry<K, V> e = find(key, hash);
             if (e == null || e.value == null) {
                 return;
@@ -700,7 +709,15 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
                 // in any case, the cold entry is moved to the top of the stack
                 addToStack(e);
             }
+            } finally {
+            writeLock2.unlock();
         }
+    }
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
 
         /**
          * Add an entry to the cache. The entry may or may not exist in the
@@ -712,8 +729,9 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
          * @param value the value (may not be null)
          * @param memory the memory used for the given entry
          * @return the old value, or null if there was no resident entry
-         */
-        synchronized V put(K key, int hash, V value, int memory) {
+         */ V put(K key, int hash, V value, int memory) {
+        writeLock3.lock();
+        try {
             if (value == null) {
                 throw new NullPointerException("The value may not be null");
             }
@@ -751,7 +769,15 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
             // added entries are always added to the stack
             addToStack(e);
             return old;
+            } finally {
+            writeLock3.unlock();
         }
+    }
+
+    private static final ReentrantReadWriteLock lock4 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock4 = lock4.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock4 = lock4.writeLock();
+
 
         /**
          * Remove an entry. Both resident and non-resident entries can be
@@ -760,8 +786,9 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
          * @param key the key (may not be null)
          * @param hash the hash
          * @return the old value, or null if there was no resident entry
-         */
-        synchronized V remove(Object key, int hash) {
+         */ V remove(Object key, int hash) {
+        writeLock4.lock();
+        try {
             int index = hash & mask;
             Entry<K, V> e = entries[index];
             if (e == null) {
@@ -803,7 +830,10 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
             }
             pruneStack();
             return old;
+            } finally {
+            writeLock4.unlock();
         }
+    }
 
         /**
          * Evict cold entries (resident and non-resident) until the memory limit
@@ -942,6 +972,11 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
             }
         }
 
+    private static final ReentrantReadWriteLock lock5 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock5 = lock5.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock5 = lock5.writeLock();
+
+
         /**
          * Get the list of keys. This method allows to read the internal state
          * of the cache.
@@ -949,8 +984,9 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
          * @param cold if true, only keys for the cold entries are returned
          * @param nonResident true for non-resident entries
          * @return the key list
-         */
-        synchronized List<K> keys(boolean cold, boolean nonResident) {
+         */ List<K> keys(boolean cold, boolean nonResident) {
+        writeLock5.lock();
+        try {
             ArrayList<K> keys = new ArrayList<>();
             if (cold) {
                 Entry<K, V> start = nonResident ? queue2 : queue;
@@ -965,7 +1001,10 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
                 }
             }
             return keys;
+            } finally {
+            writeLock5.unlock();
         }
+    }
 
         /**
          * Check whether there is a resident entry for the given key. This
@@ -980,12 +1019,18 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
             return e != null && e.value != null;
         }
 
+    private static final ReentrantReadWriteLock lock6 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock6 = lock6.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock6 = lock6.writeLock();
+
+
         /**
          * Get the set of keys for resident entries.
          *
          * @return the set of keys
-         */
-        synchronized Set<K> keySet() {
+         */ Set<K> keySet() {
+        writeLock6.lock();
+        try {
             HashSet<K> set = new HashSet<>();
             for (Entry<K, V> e = stack.stackNext; e != stack; e = e.stackNext) {
                 set.add(e.key);
@@ -994,7 +1039,10 @@ public class CacheLIRS<K, V> extends AbstractMap<K, V> {
                 set.add(e.key);
             }
             return set;
+            } finally {
+            writeLock6.unlock();
         }
+    }
 
         /**
          * Set the maximum memory this cache should use. This will not

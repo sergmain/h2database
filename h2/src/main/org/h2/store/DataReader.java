@@ -5,6 +5,8 @@
  */
 package org.h2.store;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -122,10 +124,20 @@ public class DataReader extends Reader {
 
         private static final long serialVersionUID = 1L;
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
         @Override
-        public synchronized Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {
+        writeLock0.lock();
+        try {
             return null;
+            } finally {
+            writeLock0.unlock();
         }
+    }
 
     }
 

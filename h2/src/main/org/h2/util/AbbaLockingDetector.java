@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.lang.management.ManagementFactory;
 import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
@@ -49,12 +51,22 @@ public class AbbaLockingDetector implements Runnable {
         return this;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Reset the state.
      */
-    public synchronized void reset() {
+    public void reset() {
+        writeLock0.lock();
+        try {
         lockOrdering.clear();
         knownDeadlocks.clear();
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     /**
@@ -135,8 +147,15 @@ public class AbbaLockingDetector implements Runnable {
         }
     }
 
-    private synchronized void markHigher(List<String> lockOrder,
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
+    private void markHigher(List<String> lockOrder,
             ThreadInfo threadInfo) {
+        writeLock1.lock();
+        try {
         String topLock = lockOrder.get(lockOrder.size() - 1);
         Map<String, String> map = lockOrdering.get(topLock);
         if (map == null) {
@@ -168,6 +187,9 @@ public class AbbaLockingDetector implements Runnable {
                 }
                 map.put(olderLock, oldException);
             }
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 

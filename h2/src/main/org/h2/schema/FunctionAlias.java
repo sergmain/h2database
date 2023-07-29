@@ -5,6 +5,8 @@
  */
 package org.h2.schema;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -114,7 +116,14 @@ public final class FunctionAlias extends UserDefinedFunction {
         }
     }
 
-    private synchronized void load() {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private void load() {
+        writeLock0.lock();
+        try {
         if (javaMethods != null) {
             return;
         }
@@ -122,6 +131,9 @@ public final class FunctionAlias extends UserDefinedFunction {
             loadFromSource();
         } else {
             loadClass();
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 
@@ -224,13 +236,23 @@ public final class FunctionAlias extends UserDefinedFunction {
         return DbObject.FUNCTION_ALIAS;
     }
 
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
     @Override
-    public synchronized void removeChildrenAndResources(SessionLocal session) {
+    public void removeChildrenAndResources(SessionLocal session) {
+        writeLock2.lock();
+        try {
         database.removeMeta(session, getId());
         className = null;
         methodName = null;
         javaMethods = null;
         invalidate();
+        } finally {
+            writeLock2.unlock();
+        }
     }
 
     /**

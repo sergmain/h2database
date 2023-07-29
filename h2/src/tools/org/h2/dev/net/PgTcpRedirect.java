@@ -5,6 +5,8 @@
  */
 package org.h2.dev.net;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -536,13 +538,20 @@ public class PgTcpRedirect {
         }
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Print the uninterpreted byte array.
      *
      * @param buffer the byte array
      * @param len the length
      */
-    static synchronized void printData(byte[] buffer, int len) {
+    static void printData(byte[] buffer, int len) {
+        writeLock0.lock();
+        try {
         if (DEBUG) {
             System.out.print(" ");
             for (int i = 0; i < len; i++) {
@@ -554,6 +563,9 @@ public class PgTcpRedirect {
                 }
             }
             System.out.println();
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 }

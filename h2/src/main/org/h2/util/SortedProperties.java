@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,14 +34,24 @@ public class SortedProperties extends Properties {
 
     private static final long serialVersionUID = 1L;
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized Enumeration<Object> keys() {
+    public Enumeration<Object> keys() {
+        writeLock0.lock();
+        try {
         ArrayList<Object> v = new ArrayList<>();
         for (Object o : keySet()) {
             v.add(o.toString());
         }
         v.sort(null);
         return Collections.enumeration(v);
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     /**
@@ -90,6 +102,11 @@ public class SortedProperties extends Properties {
         return prop.getProperty(key, def);
     }
 
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
     /**
      * Load a properties object from a file.
      *
@@ -97,8 +114,10 @@ public class SortedProperties extends Properties {
      * @return the properties object
      * @throws IOException on failure
      */
-    public static synchronized SortedProperties loadProperties(String fileName)
+    public static SortedProperties loadProperties(String fileName)
             throws IOException {
+        writeLock1.lock();
+        try {
         SortedProperties prop = new SortedProperties();
         if (FileUtils.exists(fileName)) {
             try (InputStream in = FileUtils.newInputStream(fileName)) {
@@ -106,7 +125,15 @@ public class SortedProperties extends Properties {
             }
         }
         return prop;
+        } finally {
+            writeLock1.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
 
     /**
      * Store a properties file. The header and the date is not written.
@@ -114,7 +141,9 @@ public class SortedProperties extends Properties {
      * @param fileName the target file name
      * @throws IOException on failure
      */
-    public synchronized void store(String fileName) throws IOException {
+    public void store(String fileName) throws IOException {
+        writeLock2.lock();
+        try {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         store(out, null);
         ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
@@ -137,19 +166,32 @@ public class SortedProperties extends Properties {
                 }
             }
         }
+        } finally {
+            writeLock2.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
 
     /**
      * Convert the map to a list of line in the form key=value.
      *
      * @return the lines
      */
-    public synchronized String toLines() {
+    public String toLines() {
+        writeLock3.lock();
+        try {
         StringBuilder buff = new StringBuilder();
         for (Entry<Object, Object> e : new TreeMap<>(this).entrySet()) {
             buff.append(e.getKey()).append('=').append(e.getValue()).append('\n');
         }
         return buff.toString();
+        } finally {
+            writeLock3.unlock();
+        }
     }
 
     /**

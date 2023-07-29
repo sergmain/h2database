@@ -5,6 +5,8 @@
  */
 package org.h2.fulltext;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -714,51 +716,89 @@ public class FullTextLucene extends FullText {
             initializeSearcher();
         }
 
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
+
         /**
          * Start using the searcher.
          *
          * @return the searcher
          * @throws IOException on failure
-         */
-        synchronized IndexSearcher getSearcher() throws IOException {
+         */ IndexSearcher getSearcher() throws IOException {
+        writeLock2.lock();
+        try {
             if (!searcher.getIndexReader().tryIncRef()) {
                 initializeSearcher();
             }
             return searcher;
+            } finally {
+            writeLock2.unlock();
         }
+    }
 
         private void initializeSearcher() throws IOException {
             IndexReader reader = DirectoryReader.open(writer);
             searcher = new IndexSearcher(reader);
         }
 
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
+
         /**
          * Stop using the searcher.
          *
          * @param searcher the searcher
          * @throws IOException on failure
-         */
-        synchronized void returnSearcher(IndexSearcher searcher) throws IOException {
+         */ void returnSearcher(IndexSearcher searcher) throws IOException {
+        writeLock3.lock();
+        try {
             searcher.getIndexReader().decRef();
+            } finally {
+            writeLock3.unlock();
         }
+    }
+
+    private static final ReentrantReadWriteLock lock4 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock4 = lock4.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock4 = lock4.writeLock();
+
 
         /**
          * Commit the changes.
          * @throws IOException on failure
          */
-        public synchronized void commit() throws IOException {
+        public void commit() throws IOException {
+        writeLock4.lock();
+        try {
             writer.commit();
             returnSearcher(searcher);
             searcher = new IndexSearcher(DirectoryReader.open(writer));
+            } finally {
+            writeLock4.unlock();
         }
+    }
+
+    private static final ReentrantReadWriteLock lock5 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock5 = lock5.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock5 = lock5.writeLock();
+
 
         /**
          * Close the index.
          * @throws IOException on failure
          */
-        public synchronized void close() throws IOException {
+        public void close() throws IOException {
+        writeLock5.lock();
+        try {
             searcher = null;
             writer.close();
+            } finally {
+            writeLock5.unlock();
         }
+    }
     }
 }

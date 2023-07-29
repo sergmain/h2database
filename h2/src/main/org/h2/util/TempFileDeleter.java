@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.lang.ref.PhantomReference;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
@@ -31,6 +33,11 @@ public class TempFileDeleter {
         return new TempFileDeleter();
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Add a file or a closeable to the list of temporary objects to delete. The
      * file is deleted once the file object is garbage collected.
@@ -39,7 +46,9 @@ public class TempFileDeleter {
      * @param monitor the object to monitor
      * @return the reference that can be used to stop deleting the file or closing the closeable
      */
-    public synchronized Reference<?> addFile(Object resource, Object monitor) {
+    public Reference<?> addFile(Object resource, Object monitor) {
+        writeLock0.lock();
+        try {
         if (!(resource instanceof String) && !(resource instanceof AutoCloseable)) {
             throw DbException.getUnsupportedException("Unsupported resource " + resource);
         }
@@ -49,7 +58,15 @@ public class TempFileDeleter {
         refMap.put(ref, resource);
         deleteUnused();
         return ref;
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * Delete the given file or close the closeable now. This will remove the
@@ -58,7 +75,9 @@ public class TempFileDeleter {
      * @param ref the reference as returned by addFile
      * @param resource the file name or closeable
      */
-    public synchronized void deleteFile(Reference<?> ref, Object resource) {
+    public void deleteFile(Reference<?> ref, Object resource) {
+        writeLock1.lock();
+        try {
         if (ref != null) {
             Object f2 = refMap.remove(ref);
             if (f2 != null) {
@@ -88,6 +107,9 @@ public class TempFileDeleter {
             } catch (Exception e) {
                 // TODO log such errors?
             }
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 

@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
@@ -82,7 +84,14 @@ public class AbbaDetector {
         return o.getClass().getSimpleName() + "@" + System.identityHashCode(o);
     }
 
-    private static synchronized void markHigher(Object o, Deque<Object> older) {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private static void markHigher(Object o, Deque<Object> older) {
+        writeLock0.lock();
+        try {
         Object test = getTest(o);
         Map<Object, Exception> map = LOCK_ORDERING.get(test);
         if (map == null) {
@@ -118,6 +127,9 @@ public class AbbaDetector {
                 }
                 map.put(oldTest, oldException);
             }
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 

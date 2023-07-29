@@ -5,6 +5,8 @@
  */
 package org.h2.schema;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -72,12 +74,22 @@ public final class UserAggregate extends UserDefinedFunction {
         return DbObject.AGGREGATE;
     }
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized void removeChildrenAndResources(SessionLocal session) {
+    public void removeChildrenAndResources(SessionLocal session) {
+        writeLock0.lock();
+        try {
         database.removeMeta(session, getId());
         className = null;
         javaClass = null;
         invalidate();
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     /**

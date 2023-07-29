@@ -5,6 +5,8 @@
  */
 package org.h2.test.utils;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -327,11 +329,21 @@ class FileDebug extends FileBase {
         }
     }
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized FileLock tryLock(long position, long size,
+    public FileLock tryLock(long position, long size,
             boolean shared) throws IOException {
+        writeLock0.lock();
+        try {
         debug("tryLock");
         return channel.tryLock(position, size, shared);
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     @Override

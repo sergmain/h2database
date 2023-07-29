@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -17,45 +19,95 @@ public abstract class FileBaseDefault extends FileBase {
 
     private long position = 0;
 
-    @Override
-    public final synchronized long position() throws IOException {
-        return position;
-    }
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
 
     @Override
-    public final synchronized FileChannel position(long newPosition) throws IOException {
+    public final long position() throws IOException {
+        writeLock0.lock();
+        try {
+        return position;
+        } finally {
+            writeLock0.unlock();
+        }
+    }
+
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+    @Override
+    public final FileChannel position(long newPosition) throws IOException {
+        writeLock1.lock();
+        try {
         if (newPosition < 0) {
             throw new IllegalArgumentException();
         }
         position = newPosition;
         return this;
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
     @Override
-    public final synchronized int read(ByteBuffer dst) throws IOException {
+    public final int read(ByteBuffer dst) throws IOException {
+        writeLock2.lock();
+        try {
         int read = read(dst, position);
         if (read > 0) {
             position += read;
         }
         return read;
+        } finally {
+            writeLock2.unlock();
+        }
     }
 
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
     @Override
-    public final synchronized int write(ByteBuffer src) throws IOException {
+    public final int write(ByteBuffer src) throws IOException {
+        writeLock3.lock();
+        try {
         int written = write(src, position);
         if (written > 0) {
             position += written;
         }
         return written;
+        } finally {
+            writeLock3.unlock();
+        }
     }
 
+
+    private static final ReentrantReadWriteLock lock4 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock4 = lock4.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock4 = lock4.writeLock();
+
     @Override
-    public final synchronized FileChannel truncate(long newLength) throws IOException {
+    public final FileChannel truncate(long newLength) throws IOException {
+        writeLock4.lock();
+        try {
         implTruncate(newLength);
         if (newLength < position) {
             position = newLength;
         }
         return this;
+        } finally {
+            writeLock4.unlock();
+        }
     }
 
     /**

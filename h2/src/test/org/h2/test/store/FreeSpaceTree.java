@@ -5,6 +5,8 @@
  */
 package org.h2.test.store;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.util.TreeSet;
 
 import org.h2.mvstore.DataUtils;
@@ -39,14 +41,29 @@ public class FreeSpaceTree {
         clear();
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Reset the list.
      */
-    public synchronized void clear() {
+    public void clear() {
+        writeLock0.lock();
+        try {
         freeSpace.clear();
         freeSpace.add(new BlockRange(firstFreeBlock,
                 Integer.MAX_VALUE - firstFreeBlock));
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * Allocate a number of blocks and mark them as used.
@@ -54,7 +71,9 @@ public class FreeSpaceTree {
      * @param length the number of bytes to allocate
      * @return the start position in bytes
      */
-    public synchronized long allocate(int length) {
+    public long allocate(int length) {
+        writeLock1.lock();
+        try {
         int blocks = getBlockCount(length);
         BlockRange x = null;
         for (BlockRange b : freeSpace) {
@@ -71,7 +90,15 @@ public class FreeSpaceTree {
             x.blocks -= blocks;
         }
         return pos;
+        } finally {
+            writeLock1.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
 
     /**
      * Mark the space as in use.
@@ -79,7 +106,9 @@ public class FreeSpaceTree {
      * @param pos the position in bytes
      * @param length the number of bytes
      */
-    public synchronized void markUsed(long pos, int length) {
+    public void markUsed(long pos, int length) {
+        writeLock2.lock();
+        try {
         int start = getBlock(pos);
         int blocks = getBlockCount(length);
         BlockRange x = new BlockRange(start, blocks);
@@ -107,7 +136,15 @@ public class FreeSpaceTree {
             freeSpace.add(x);
             prev.blocks = start - prev.start;
         }
+        } finally {
+            writeLock2.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock3 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock3 = lock3.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock3 = lock3.writeLock();
+
 
     /**
      * Mark the space as free.
@@ -115,7 +152,9 @@ public class FreeSpaceTree {
      * @param pos the position in bytes
      * @param length the number of bytes
      */
-    public synchronized void free(long pos, int length) {
+    public void free(long pos, int length) {
+        writeLock3.lock();
+        try {
         int start = getBlock(pos);
         int blocks = getBlockCount(length);
         BlockRange x = new BlockRange(start, blocks);
@@ -144,6 +183,9 @@ public class FreeSpaceTree {
             return;
         }
         freeSpace.add(x);
+        } finally {
+            writeLock3.unlock();
+        }
     }
 
     private long getPos(int block) {

@@ -5,6 +5,8 @@
  */
 package org.h2.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.net.BindException;
 import java.net.Inet6Address;
@@ -256,13 +258,20 @@ public class NetUtils {
         return null;
     }
 
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
     /**
      * Get the local host address as a string.
      * For performance, the result is cached for one second.
      *
      * @return the local host address
      */
-    public static synchronized String getLocalAddress() {
+    public static String getLocalAddress() {
+        writeLock1.lock();
+        try {
         long now = System.nanoTime();
         if (cachedLocalAddress != null && now - cachedLocalAddressTime < CACHE_MILLIS * 1_000_000L) {
             return cachedLocalAddress;
@@ -305,6 +314,9 @@ public class NetUtils {
         cachedLocalAddress = address;
         cachedLocalAddressTime = now;
         return address;
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
     /**

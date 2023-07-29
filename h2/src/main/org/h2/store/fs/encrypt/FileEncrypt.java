@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs.encrypt;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -101,7 +103,14 @@ public class FileEncrypt extends FileBaseDefault {
         return xts;
     }
 
-    private synchronized XTS createXTS() throws IOException {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private XTS createXTS() throws IOException {
+        writeLock0.lock();
+        try {
         XTS xts = this.xts;
         if (xts != null) {
             return xts;
@@ -141,6 +150,9 @@ public class FileEncrypt extends FileBaseDefault {
             size = sz;
         }
         return this.xts = xts;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     @Override

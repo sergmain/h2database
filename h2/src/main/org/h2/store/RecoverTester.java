@@ -5,6 +5,8 @@
  */
 package org.h2.store;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -42,16 +44,26 @@ public class RecoverTester implements Recorder {
     private final HashSet<String> knownErrors = new HashSet<>();
     private volatile boolean testing;
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Initialize the recover test.
      *
      * @param recoverTest the value of the recover test parameter
      */
-    public static synchronized void init(String recoverTest) {
+    public static void init(String recoverTest) {
+        writeLock0.lock();
+        try {
         if (StringUtils.isNumber(recoverTest)) {
             instance.setTestEvery(Integer.parseInt(recoverTest));
         }
         FilePathRec.setRecorder(instance);
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     @Override
@@ -89,7 +101,14 @@ public class RecoverTester implements Recorder {
         }
     }
 
-    private synchronized void testDatabase(String fileName, PrintWriter out) {
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
+    private void testDatabase(String fileName, PrintWriter out) {
+        writeLock1.lock();
+        try {
         out.println("+ write #" + writeCount + " verify #" + verifyCount);
         try {
             IOUtils.copyFiles(fileName, testDatabase + Constants.SUFFIX_MV_FILE);
@@ -166,6 +185,9 @@ public class RecoverTester implements Recorder {
             } else {
                 out.println(writeCount + " code: " + errorCode);
             }
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 

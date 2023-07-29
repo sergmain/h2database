@@ -5,6 +5,8 @@
  */
 package org.h2.schema;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,7 +53,14 @@ public final class InformationSchema extends MetaSchema {
         return map;
     }
 
-    private synchronized HashMap<String, Table> fillMap(boolean old) {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private HashMap<String, Table> fillMap(boolean old) {
+        writeLock0.lock();
+        try {
         HashMap<String, Table> map = old ? oldTables : newTables;
         if (map == null) {
             map = database.newStringMap(64);
@@ -72,6 +81,9 @@ public final class InformationSchema extends MetaSchema {
             }
         }
         return map;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
 }

@@ -5,6 +5,8 @@
  */
 package org.h2.test.unit;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
@@ -86,7 +88,14 @@ public class TestReopen extends TestBase implements Recorder {
         }
     }
 
-    private synchronized void logDb(String fileName) {
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
+    private void logDb(String fileName) {
+        writeLock0.lock();
+        try {
         writeCount++;
         if ((writeCount & (testEvery - 1)) != 0) {
             return;
@@ -178,6 +187,9 @@ public class TestReopen extends TestBase implements Recorder {
             } else {
                 System.out.println(writeCount + " code: " + errorCode);
             }
+        }
+        } finally {
+            writeLock0.unlock();
         }
     }
 

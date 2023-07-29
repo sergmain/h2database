@@ -5,6 +5,8 @@
  */
 package org.h2.store;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.BindException;
@@ -94,13 +96,20 @@ public class FileLock implements Runnable {
         this.sleep = sleep;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Lock the file if possible. A file may only be locked once.
      *
      * @param fileLockMethod the file locking method to use
      * @throws DbException if locking was not successful
      */
-    public synchronized void lock(FileLockMethod fileLockMethod) {
+    public void lock(FileLockMethod fileLockMethod) {
+        writeLock0.lock();
+        try {
         checkServer();
         if (locked) {
             throw DbException.getInternalError("already locked");
@@ -117,13 +126,23 @@ public class FileLock implements Runnable {
             break;
         }
         locked = true;
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * Unlock the file. The watchdog thread is stopped. This method does nothing
      * if the file is already unlocked.
      */
-    public synchronized void unlock() {
+    public void unlock() {
+        writeLock1.lock();
+        try {
         if (!locked) {
             return;
         }
@@ -158,6 +177,9 @@ public class FileLock implements Runnable {
             trace.debug(e, "unlock");
         } finally {
             watchdog = null;
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 

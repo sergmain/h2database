@@ -5,6 +5,8 @@
  */
 package org.h2.jdbcx;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -448,8 +450,15 @@ public final class JdbcXAConnection extends TraceObject implements XAConnection,
             this.closedHandleFunc = closedHandleFunc;
         }
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
         @Override
-        public synchronized void close() throws SQLException {
+        public void close() throws SQLException {
+        writeLock0.lock();
+        try {
             if (!isClosed) {
                 try {
                     rollback();
@@ -460,20 +469,43 @@ public final class JdbcXAConnection extends TraceObject implements XAConnection,
                 closedHandleFunc.run();
                 isClosed = true;
             }
+            } finally {
+            writeLock0.unlock();
         }
+    }
+
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
 
         @Override
-        public synchronized boolean isClosed() throws SQLException {
+        public boolean isClosed() throws SQLException {
+        writeLock1.lock();
+        try {
             return isClosed || super.isClosed();
+            } finally {
+            writeLock1.unlock();
         }
+    }
+
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
 
         @Override
-        protected synchronized void checkClosed() {
+        protected void checkClosed() {
+        writeLock2.lock();
+        try {
             if (isClosed) {
                 throw DbException.get(ErrorCode.OBJECT_CLOSED);
             }
             super.checkClosed();
+            } finally {
+            writeLock2.unlock();
         }
+    }
 
     }
 

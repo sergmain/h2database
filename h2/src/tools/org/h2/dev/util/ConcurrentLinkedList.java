@@ -5,6 +5,8 @@
  */
 package org.h2.dev.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.util.Iterator;
 
 /**
@@ -50,14 +52,29 @@ public class ConcurrentLinkedList<K> {
         return x.obj;
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Add an element at the end.
      *
      * @param obj the element
      */
-    public synchronized void add(K obj) {
+    public void add(K obj) {
+        writeLock0.lock();
+        try {
         head = Entry.append(head, obj);
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * Remove the first element, if it matches.
@@ -65,13 +82,23 @@ public class ConcurrentLinkedList<K> {
      * @param obj the element to remove
      * @return true if the element matched and was removed
      */
-    public synchronized boolean removeFirst(K obj) {
+    public boolean removeFirst(K obj) {
+        writeLock1.lock();
+        try {
         if (head.obj != obj) {
             return false;
         }
         head = head.next;
         return true;
+        } finally {
+            writeLock1.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock2 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock2 = lock2.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock2 = lock2.writeLock();
+
 
     /**
      * Remove the last element, if it matches.
@@ -79,12 +106,17 @@ public class ConcurrentLinkedList<K> {
      * @param obj the element to remove
      * @return true if the element matched and was removed
      */
-    public synchronized boolean removeLast(K obj) {
+    public boolean removeLast(K obj) {
+        writeLock2.lock();
+        try {
         if (peekLast() != obj) {
             return false;
         }
         head = Entry.removeLast(head);
         return true;
+        } finally {
+            writeLock2.unlock();
+        }
     }
 
     /**

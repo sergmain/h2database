@@ -5,6 +5,8 @@
  */
 package org.h2.store;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
@@ -480,12 +482,19 @@ public class FileStore {
         }
     }
 
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
+
     /**
      * Try to lock the file.
      *
      * @return true if successful
      */
-    public synchronized boolean tryLock() {
+    public boolean tryLock() {
+        writeLock0.lock();
+        try {
         try {
             lock = file.tryLock();
             return lock != null;
@@ -493,12 +502,22 @@ public class FileStore {
             // ignore OverlappingFileLockException
             return false;
         }
+        } finally {
+            writeLock0.unlock();
+        }
     }
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
 
     /**
      * Release the file lock.
      */
-    public synchronized void releaseLock() {
+    public void releaseLock() {
+        writeLock1.lock();
+        try {
         if (file != null && lock != null) {
             try {
                 lock.release();
@@ -506,6 +525,9 @@ public class FileStore {
                 // ignore
             }
             lock = null;
+        }
+        } finally {
+            writeLock1.unlock();
         }
     }
 

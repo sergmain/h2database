@@ -5,6 +5,8 @@
  */
 package org.h2.fulltext;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -195,6 +197,11 @@ final class FullTextSettings {
         return path;
     }
 
+    private static final ReentrantReadWriteLock lock7 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock7 = lock7.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock7 = lock7.writeLock();
+
+
     /**
      * Prepare a statement. The statement is cached in a soft reference cache.
      *
@@ -202,8 +209,9 @@ final class FullTextSettings {
      * @param sql the statement
      * @return the prepared statement
      * @throws SQLException on failure
-     */
-    synchronized PreparedStatement prepare(Connection conn, String sql) throws SQLException {
+     */ PreparedStatement prepare(Connection conn, String sql) throws SQLException {
+        writeLock7.lock();
+        try {
         SoftValuesHashMap<String, PreparedStatement> c = cache.get(conn);
         if (c == null) {
             c = new SoftValuesHashMap<>();
@@ -218,6 +226,9 @@ final class FullTextSettings {
             c.put(sql, prep);
         }
         return prep;
+        } finally {
+            writeLock7.unlock();
+        }
     }
 
     /**

@@ -5,6 +5,8 @@
  */
 package org.h2.store.fs;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -18,24 +20,44 @@ import java.nio.channels.WritableByteChannel;
  */
 public abstract class FileBase extends FileChannel {
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized int read(ByteBuffer dst, long position)
+    public int read(ByteBuffer dst, long position)
             throws IOException {
+        writeLock0.lock();
+        try {
         long oldPos = position();
         position(position);
         int len = read(dst);
         position(oldPos);
         return len;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
+
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
     @Override
-    public synchronized int write(ByteBuffer src, long position)
+    public int write(ByteBuffer src, long position)
             throws IOException {
+        writeLock1.lock();
+        try {
         long oldPos = position();
         position(position);
         int len = write(src);
         position(oldPos);
         return len;
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
     @Override

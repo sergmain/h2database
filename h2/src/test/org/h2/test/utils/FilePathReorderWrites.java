@@ -5,6 +5,8 @@
  */
 package org.h2.test.utils;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -274,10 +276,20 @@ class FileReorderWrites extends FileBaseDefault {
         file.checkError();
     }
 
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized FileLock tryLock(long position, long size,
+    public FileLock tryLock(long position, long size,
             boolean shared) throws IOException {
+        writeLock0.lock();
+        try {
         return readBase.tryLock(position, size, shared);
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     @Override

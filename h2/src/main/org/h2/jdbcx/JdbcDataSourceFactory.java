@@ -5,6 +5,8 @@
  */
 package org.h2.jdbcx;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.util.Hashtable;
 
 import javax.naming.Context;
@@ -52,9 +54,16 @@ public final class JdbcDataSourceFactory implements ObjectFactory {
      * @return the new JdbcDataSource, or null if the reference class name is
      *         not JdbcDataSource.
      */
+
+    private static final ReentrantReadWriteLock lock0 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock0 = lock0.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock0 = lock0.writeLock();
+
     @Override
-    public synchronized Object getObjectInstance(Object obj, Name name,
+    public Object getObjectInstance(Object obj, Name name,
             Context nameCtx, Hashtable<?, ?> environment) {
+        writeLock0.lock();
+        try {
         if (trace.isDebugEnabled()) {
             trace.debug("getObjectInstance obj={0} name={1} " +
                     "nameCtx={2} environment={3}", obj, name, nameCtx, environment);
@@ -73,6 +82,9 @@ public final class JdbcDataSourceFactory implements ObjectFactory {
             }
         }
         return null;
+        } finally {
+            writeLock0.unlock();
+        }
     }
 
     /**

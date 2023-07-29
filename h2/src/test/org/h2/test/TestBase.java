@@ -5,6 +5,8 @@
  */
 package org.h2.test;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileWriter;
@@ -406,16 +408,26 @@ public abstract class TestBase {
         printlnWithTime(time, getClass().getName() + ' ' + s);
     }
 
+    private static final ReentrantReadWriteLock lock1 = new ReentrantReadWriteLock();
+    private static final ReentrantReadWriteLock.ReadLock readLock1 = lock1.readLock();
+    private static final ReentrantReadWriteLock.WriteLock writeLock1 = lock1.writeLock();
+
+
     /**
      * Print a message, prepended with the specified time in milliseconds.
      *
      * @param millis the time in milliseconds
      * @param s the message
      */
-    static synchronized void printlnWithTime(long millis, String s) {
+    static void printlnWithTime(long millis, String s) {
+        writeLock1.lock();
+        try {
         StringBuilder builder = new StringBuilder(s.length() + 19);
         timeFormat.formatTo(LocalTime.now(), builder);
         System.out.println(formatTime(builder.append(' '), millis).append(' ').append(s).toString());
+        } finally {
+            writeLock1.unlock();
+        }
     }
 
     /**
